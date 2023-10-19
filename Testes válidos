@@ -1,0 +1,88 @@
+"""WhatsPython
+- [x] Enviar "Messagem"
+  - Destinatário
+  - Remetente
+  - Texto
+- [x] Visualizar Conversa
+  - Conjunto de mensagens
+  - mais recentes -> mais embaixo
+- [x] Visualizar todas as conversas
+  - mais recentes -> mais acima
+"""
+from datetime import datetime
+
+LARGURA_MAXIMA=59
+
+def formata_mensagem(texto:str,*,remetente:str = '',destinatario:str = '', timestamp: datetime = None) -> str:
+    """formata mensagem para exibição no terminal
+
+    >>> kwargs = { 'texto': 'oi,sumido', 'timestamp': datetime(2005, 7, 14, 12, 30) }
+    >>> formata_mensagem(**kwargs)
+    'oi,sumido >> 12:30'
+    >>> kwargs['texto'] = 'oi'
+    >>> formata_mensagem(**kwargs)
+    'oi >> 12:30'
+    >>> kwargs['remetente'] = 'gertrudes'
+    >>> formata_mensagem(**kwargs)
+    'oi >> 12:30'
+    """
+    timestamp = datetime.now() if not timestamp else timestamp
+    return f"{texto} >> {timestamp.strftime('%H:%M')}"
+
+def alinha_mensagem(texto:str,*,remetente:bool=True,largura:int=LARGURA_MAXIMA) -> str:
+    """alinha mensagem de acordo com quem enviou na conversa
+
+    mensagens enviadas pelo usuário atual, alinhadas à direita
+    mensagens recebidas pelo usuário atual, alinhadas à esquerda
+
+    >>> alinha_mensagem('oi,sumido >> hh:mm',largura=20)    
+    '  oi,sumido >> hh:mm'
+    >>> alinha_mensagem('oi,sumido >> hh:mm',largura=20,remetente=False)    
+    'oi,sumido >> hh:mm  '
+    """
+    if(remetente): return texto.rjust(largura)
+    return texto.ljust(largura)
+
+def formata_conversa(conversa: list[{'texto':str,'timestamp':datetime,'remetente':str}],*,remetente: str, titulo: str = '', **resto) -> str:
+    """conversa em formato apresentável para terminal
+
+    >>> conversa = [{'texto': 'oi', 'timestamp': datetime(2005, 7, 14, 12, 30), 'remetente': 'Gertrudes'}]
+    >>> formata_conversa(conversa, remetente='Gertrudes', largura=2)
+    'oi >> 12:30'
+    """
+    texto_corrido = '\n'.join([alinha_mensagem(formata_mensagem(**mensagem),remetente=remetente == mensagem['remetente'], **resto) for mensagem in conversa])
+    if(titulo): return titulo + '\n' + texto_corrido
+    return texto_corrido
+
+def adiciona_mensagem(conversa: list[dict[str,str]],/,*,remetente:str, mensagem: str, timestamp: datetime = None):
+    """Insere uma nova mensagem na conversa
+
+    :param: conversa espera lista de dicionários com campos 'texto', 'timestamp' e 'remetente'
+
+    >>> adiciona_mensagem([],remetente = 'Gertrudes', mensagem = 'oi', timestamp = datetime(2005, 7, 14, 12, 30))
+    [{'texto': 'oi', 'timestamp': datetime.datetime(2005, 7, 14, 12, 30), 'remetente': 'Gertrudes'}]
+    """
+    nova_conversa = conversa[:]
+    mensagem = { 'texto': mensagem, 'timestamp': timestamp or datetime.now(), 'remetente': remetente }
+    nova_conversa.append(mensagem)
+    return nova_conversa
+
+def lista_conversas(banco_dados: dict[str,dict[str,list[dict[str,str]]]],*,remetente:str):
+    """ Retorna lista de conversas do usuário
+
+    :param: conversa espera lista de dicionários com campos 'texto', 'timestamp' e 'remetente'
+
+    >>> banco_dados = {'Crush <3': {'Gertrudes': [{'texto': 'oi', 'timestamp': datetime(2023, 1, 31, 1, 8, 57, 401756), 'remetente': 'Gertrudes'}, {'texto': 'oi, de crush', 'timestamp': datetime(2023, 1, 31, 1, 8, 57, 401756), 'remetente': 'Crush <3'}]}, 'Gertrudes': {'Crush <3': [{'texto': 'oi', 'timestamp': datetime(2023, 1, 31, 1, 8, 57, 401756), 'remetente': 'Gertrudes'}, {'texto': 'oi, de crush', 'timestamp': datetime(2023, 1, 31, 1, 8, 57, 401756), 'remetente': 'Crush <3'}]}}
+    >>> lista_conversas(banco_dados, remetente='Gertrudes')
+    ['Crush <3']
+    >>> banco_dados = {'Gertrudes': {'Crush <3': [{'texto': 'oi', 'timestamp': datetime(2023, 1, 31, 1, 22, 2, 138267), 'remetente': 'Crush <3'}], 'ricardo': [{'texto': 'oi', 'timestamp': datetime(2023, 1, 31, 1, 23, 2, 138267), 'remetente': 'ricardo'}]}, 'Crush <3': {'Gertrudes': [{'texto': 'oi', 'timestamp': datetime(2023, 1, 31, 1, 23, 2, 138267), 'remetente': 'Crush <3'}]}, 'ricardo': {'Gertrudes': [{'texto': 'oi', 'timestamp': datetime(2023, 1, 31, 1, 23, 2, 138267), 'remetente': 'ricardo'}]}}
+    >>> lista_conversas(banco_dados, remetente='Gertrudes')
+    ['ricardo', 'Crush <3']
+    """
+    if remetente not in banco_dados: return []
+    conversas = banco_dados[remetente]
+    return sorted(conversas, key=lambda contato: conversas[contato][-1]['timestamp'], reverse=True)
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod(verbose=True)
